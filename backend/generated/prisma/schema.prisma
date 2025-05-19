@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  SURVEILLANT
+  DIRECTEUR
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  teacher     Teacher?
+  student     Student?
+  surveillant Surveillant?
+  directeur   Directeur?
+}
+
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classes      Class[]
+  subjects     Subject[]
+  teachers     Teacher[]
+  students     Student[]
+  directeur    Directeur?
+  surveillants Surveillant[] // ✅ champ manquant ajouté
+}
+
+model Class {
+  id        Int      @id @default(autoincrement())
+  name      String // Exemple: "1ère A"
+  level     String // Exemple: "1ère année"
+  schoolId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school    School    @relation(fields: [schoolId], references: [id])
+  students  Student[]
+  subjects  Subject[]
+  teacher   Teacher?  @relation(fields: [teacherId], references: [id])
+  teacherId Int?
+}
+
+model Subject {
+  id        Int    @id @default(autoincrement())
+  name      String // Exemple: "Mathématiques"
+  schoolId  Int
+  classId   Int
+  teacherId Int
+
+  school  School  @relation(fields: [schoolId], references: [id])
+  class   Class   @relation(fields: [classId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+}
+
+model Teacher {
+  id       Int @id @default(autoincrement())
+  userId   Int @unique
+  schoolId Int
+
+  user     User      @relation(fields: [userId], references: [id])
+  school   School    @relation(fields: [schoolId], references: [id])
+  subjects Subject[]
+  classes  Class[]
+}
+
+model Student {
+  id       Int @id @default(autoincrement())
+  userId   Int @unique
+  classId  Int
+  schoolId Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  class  Class  @relation(fields: [classId], references: [id])
+  school School @relation(fields: [schoolId], references: [id])
+}
+
+model Surveillant {
+  id       Int @id @default(autoincrement())
+  userId   Int @unique
+  schoolId Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  school School @relation(fields: [schoolId], references: [id])
+}
+
+model Directeur {
+  id       Int @id @default(autoincrement())
+  userId   Int @unique
+  schoolId Int @unique // Un seul directeur par école
+
+  user   User   @relation(fields: [userId], references: [id])
+  school School @relation(fields: [schoolId], references: [id])
+}
